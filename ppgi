@@ -33,6 +33,28 @@ if [ -n "$ppgi_path" ] && [ -n "$mine_gitu" ] && [ -n "$hack_path" ]; then
 fi
 ###############################################################################
 
+#############
+# UnInstall #
+#############
+if [ "$1" = "uninstall" ]; then
+  grep 'alias pomander' ~/.bash_aliases
+  if [ "$?" -eq 0 ]; then
+    printf '%s\n' "removing pomander from bash aliases"
+    sed -i '/alias pomander/d' ~/.bash_aliases
+  fi
+  grep 'alias cdh' ~/.bash_aliases
+  if [ "$?" -eq 0 ]; then
+    printf '%s\n' "removing cdh from bash aliases"
+    sed -i '/alias cdh/d' ~/.bash_aliases
+  fi
+  if [ -n "$ppgi_path" ]; then
+    printf '%s\n' "removing ppgi from path"
+    sudo rm "$ppgi_path/ppgi"
+  fi
+  printf '%s\n' "uninstalled successfully."
+  exit 0
+fi  
+
 # find absolute path of this script
 real_path=$(command -v realpath);
 script_path="$("$real_path" "$0")"
@@ -278,14 +300,14 @@ sed -i "/^####\[ HackReactor path/a hack_path=\"$hack_path\""  "$script_path"
 # bash aliases
 printf '%s\n' "do you want to add a bash alias to install pomander?"
 read -r -p "(<enter> defaults to y) [y/n]?: " response
-if [ ${response,,} != "n" ]; then
+if [ "${response,,}" != "n" ]; then
   pom_url='https://raw.githubusercontent.com/heactorcore/pomander/master/bin/install'
   printf '%s\n' "alias pomander='curl -s ${pom_url} | bash'" >> ~/.bash_aliases
   #first argument to pomander function to uninstall?
 fi
 printf '%s\n' "do you want to add a bash alias that cd's to your HR dir?"
 read -r -p "(<enter> defaults to y) [y/n]?: " response
-if [ ${response,,} != "n" ]; then
+if [ "${response,,}" != "n" ]; then
   printf '%s\n' "alias cdh='cd ${hack_path}'" >> ~/.bash_aliases
 fi
 source ~/.bashrc
