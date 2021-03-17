@@ -1,5 +1,4 @@
-# hack_reactor-pair_programming_git_init
-
+# hack_reactor-pair_programming_git_init (ppgi)
 
 ## Install
 + (navigate to base directory you want to install the repo to)
