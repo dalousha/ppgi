@@ -1,0 +1,295 @@
+#!/usr/bin/env bash
+
+###############################################################################
+#### C O N S T A N T S ########################################################
+###############################################################################
+####[ ppgi install DIR ]####
+############################
+
+####[ GitHub  UserName ]####
+############################
+
+####[ HackReactor path ]####
+############################
+###############################################################################
+
+##############
+# skip setup #
+##############
+if [ -n "$ppgi_path" ] && [ -n "$mine_gitu" ] && [ -n "$hack_path" ]; then
+  PS3="select HR repo"
+  repo_list=$(gh repo list hackreactor --private |\
+              awk -v ORS=" " '/hr-rfe/ {print $1}')
+  select hack_repo in $repo_list; do
+    printf '\n%s\n' "selected repo: $hack_repo"
+  done
+  #
+  read -r -p "pair partner's git username?: " pair_gitu
+  cd "$hack_path" || return
+  gh repo fork "hackreactor/hr-rfe2-${hack_repo}"
+  git clone "https://github.com/$mine_gitu/${hack_repo}.git"
+  git remote add pair "https://github.com/$pair_gitu/${hack_repo}.git"
+  git remote add upstream "https://github.com/hackreactor/${hack_repo}.git"
+fi
+###############################################################################
+
+# find absolute path of this script
+real_path=$(command -v realpath);
+script_path="$("$real_path" "$0")"
+
+# welcome
+clear
+printf '%s\n' "###############################################################"
+printf '%s\n' "###################### W E L C O M E ! ########################"
+printf '%s\n' "###############################################################"
+printf '%s\n' "###########[ HackReactor Pair Programming Git Init ]###########"
+printf '%s\n' "###############################################################"
+printf '%s\n' "###############################################################"
+
+#
+###############################################################################
+<<COMMENT
+print_icon() {
+if [ "$OS" = "macos" ]; then
+cat <<'EOF'
+          _
+         (/
+    .---__--.   
+   /         \  
+  |         /   
+  |         \\_ 
+   \         /  
+    \`._.-._.\` 
+EOF
+fi
+if [ "$OS" = "linux" ]; then
+cat <<EOF
+           _   
+       ---(_)  
+   _/  ---  \\ 
+  (_) |   |    
+    \\  --- _/  
+       ---(_)  
+EOF
+fi
+if [ "$OS" = "windo" ]; then
+cat <<EOF
+          _.-;;-._
+   '-..-'|   ||   |
+   '-..-'|_.-;;-._|
+   '-..-'|   ||   |
+   '-..-'|_.-''-._|
+EOF
+fi
+if [ "$OS" = "linuxonwindo" ]; then
+cat <<EOF
+                                 (HALP!) 
+          _.-;;-._            _  |/         _.-;;-._
+   '-..-'|   ||   |       ---(_)     '-..-'|   ||   |
+   '-..-'|_.-;;-._|   _/  ---  \\    '-..-'|_.-;;-._|
+   '-..-'|   ||   |  (_) |   |       '-..-'|   ||   |
+   '-..-'|_.-''-._|    \\  --- _/    '-..-'|_.-''-._|
+                         ---(_)  
+
+EOF
+fi
+}
+
+# check for dependencies
+check_for() {
+  _cmd=$(command -v "$1") 2>/dev/null
+  if [ -x "$_cmd" ]; then
+    declare "${1}_exists=true"
+    printf '%-12s%s\n' "${1}" "found!"
+  else
+    printf '%-12s%s\n' "${1}" "missing."
+  fi
+}
+#printf '\n%s\n\n' "checking for dependencies..."
+#printf '%-12s%s\n' "PACKAGE" "STATUS"
+#check_for brew
+#check_for sed
+#check_for gh
+#check_for tree
+#check_for figlet
+#echo $gh_exists
+#echo $sed_exists
+#echo $tree_exists
+
+
+ask() {
+  read -r -p "$1" response
+  if [ "${response,,}" = "y" ]; then
+    return
+  else
+    exit 1
+  fi
+}
+
+confirm() {
+  while [ "{response,,}" != "y" ]; do
+    read -r -p "$1" response
+  done
+}
+
+
+
+# identify Operating System
+printf '\n%s\n\n' "identifying Operating System..."
+kernel_name="$(uname -s)"
+case "$kernel_name" in
+  Linux*)  OS=linux;;
+  Darwin*) OS=macos;;
+  CYGWIN*) OS=windo;;
+  *) 
+esac
+
+# install missing dependencies per OS
+if [ "$OS" = "windo" ]; then
+  printf '%s\n' "don't. just don't."
+  printf '%s\n' "https://www.privacytools.io/operating-systems/#win10"
+fi
+
+if [ "$OS" = "macos" ]; then
+  printf '\n%s\n' "MacOS detected."
+  print_icon
+  if [ -z "$homebrew_exists" ]; then
+    printf '%s\n' "HomeBrew not installed"
+    printf '%s\n' "!!! this will take A WHILE !!!..."
+    printf '%s\n\n' "HomeBrew will now ask you for your password"
+    hb_url=https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
+    (curl -fsSL $hb_url)
+    brew update
+    brew upgrade
+  fi
+  if [ -z "$gh_exists" ]; then
+    brew install gh
+  fi
+  if [ -z "$sed_exists" ]; then
+    brew install sed
+  fi
+  if [ -z "$realpath_exists" ]; then
+    brew install coreutils
+  fi
+  if [ -z "$tree_exists" ]; then
+    brew install tree
+  fi
+fi
+
+if [ "$OS" = "linux" ]; then
+  if   grep -q 'Microsoft' /proc/version; then
+    echo "Ubuntu on Windows© WSL detected. :/"
+  elif grep -q 'Ubuntu' /proc/version; then
+    print_icon
+    printf '\n%s\n\n' "Ubuntu-based distro detected."
+  else
+    printf '\n%s\n\n' "non-Ubuntu-based linux distro detected."
+    printf '%s\n' "this script is configured for Ubuntu-based distros."
+    printf '%s\n' "exiting..."
+    exit 1
+  fi
+  printf '\n%s\n\n' "checking for dependencies..."
+  printf '%-12s%s\n' "PACKAGE" "STATUS"
+  check_for gh
+  check_for sed
+  check_for tree
+  read -r -p "install GitHub CLI? (y/n): " yesno
+  if [ -z "$gh_exists" ]; then
+    printf '%s\n' "We'll need root permissions to install github cli..."
+    printf '%s\n' ""
+    sudo apt-key adv --keyserver keyserver.ubuntu.com \
+                     --recv-key C99B11DEB97541F0
+    sudo apt-add-repository https://cli.github.com/packages
+    sudo apt update
+    sudo apt install gh
+  fi
+  if [ -z "$tree_exists" ]; then
+    sudo apt install tree
+  fi
+fi
+COMMENT
+###############################################################################
+# install this script to your PATH
+#ask() {
+#  local response=''
+#  read -r -p "$1" response
+#  if [ "${response,,}" = "y" ]; then
+#    return 0
+#  else
+#    return 1
+#  fi
+#}
+##alternative() {
+##  local response=''
+##  local ppgi_path=''
+##  read -r -p "$1" response
+##  if [ "${response,,}" = "y" ]; then
+##    sed -i "/^####\[ ppgi install DIR/a ppgi_path=\"/usr/local/bin/ppgi\"" "$script_path"
+##  else
+##  fi
+##}
+#ask "Accept default install location in /usr/local/bin? (y/n): "
+#if [ "$?" -eq 1 ]; then
+#  alternative "Which location would you like to install to then?: " 
+#fi
+if [ -z "$ppgi_path" ]; then
+  printf '%s\n' "installing this script to your \$PATH"
+  printf '%s\n' "by default, installs to /usr/local/bin/"
+  printf '%s\n' "<enter> or (y) to accept, (n) to customize install path"
+  read -r -p "(y/n): " response
+  if [ "${response,,}" = "n" ]; then
+    printf '%s\n' "Where would you like to install then?"
+    printf '%s\n' "example: /usr/local/bin/"
+    read -r -p "Install path?: " ppgi_path
+    # check for valid path and trailing backslash
+  else
+    ppgi_path='/usr/local/bin/'
+  fi
+  sed -i "/^####\[ ppgi install DIR/a ppgi_path=\"${ppgi_path}ppgi\"" "$script_path"
+fi
+
+# constants
+if [ -z "$mine_gitu" ]; then
+  while [ "${mine_gitu_response,,}" != "y" ]; do
+    read -r -p "enter your github username (ex. mattHR2021): " mine_gitu
+    printf '%s\n' "https://github.com/$mine_gitu"
+    read -r -p "is ^this^ you? (y/n): " mine_gitu_response
+  done
+  sed -i "/^####\[ GitHub  UserName/a mine_gitu=\'$mine_gitu\'"  "$script_path"
+fi
+if [ -z "$hack_path" ]; then
+    printf '%s\n' "which path would you like to clone your forks of HR repos to?"
+    printf '%s\n' "by default, sets to ${HOME}/hackreactor/"
+    printf '%s\n' "<enter> or (y) to accept, (n) to customize path"
+    read -r -p "(y/n): " response
+    if [ "${response,,}" = "n" ]; then
+      while [ "${hack_path_response,,}" != "y" ]; do
+        read -r -p "enter the path to clone HR repos to: " hack_path
+        printf '%s\n' "$(tree -L 1 "${hack_path}")"
+        read -r -p "^that^ path? (y/n): " hack_path_response
+      done
+    else
+      mkdir -pv ~/hackreactor
+      hack_path="${HOME}/hackreactor/"
+    fi
+fi
+sed -i "/^####\[ HackReactor path/a hack_path=\"$hack_path\""  "$script_path"
+
+# bash aliases
+printf '%s\n' "do you want to add a bash alias to install pomander?"
+read -r -p "(<enter> defaults to y) [y/n]?: " response
+if [ ${response,,} != "n" ]; then
+  pom_url='https://raw.githubusercontent.com/heactorcore/pomander/master/bin/install'
+  printf '%s\n' "alias pomander='curl -s ${pom_url} | bash'" >> ~/.bash_aliases
+  #first argument to pomander function to uninstall?
+fi
+printf '%s\n' "do you want to add a bash alias that cd's to your HR dir?"
+read -r -p "(<enter> defaults to y) [y/n]?: " response
+if [ ${response,,} != "n" ]; then
+  printf '%s\n' "alias cdh='cd ${hack_path}'" >> ~/.bash_aliases
+fi
+source ~/.bashrc
+printf '%s %s\n' "copying script to install path: " "$ppgi_path"
+printf '%s\n' "will now ask for SU (SuperUser) permissions..."
+sudo cp "$script_path" "$ppgi_path"
+#rm "$script_path" && exec "${ppgi_path}ppgi"
