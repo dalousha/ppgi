@@ -16,14 +16,14 @@
 #############
 # UnInstall #
 #############
+# remove installed dependencies ? ONLY if installed
 if [ "$1" = "uninstall" ]; then
-
   grep -q 'alias pomander' ~/.bash_aliases
   if [ "$?" -eq 0 ]; then
     printf '%s\n' "removing pomander from bash aliases"
     sed -i '/alias pomander/d' ~/.bash_aliases
     if [ "$?" -eq 0 ]; then
-      printf '%s\n' "pomander alias successfully removed"
+      printf '%s\n\n' "pomander alias successfully removed"
     fi
   fi
   grep -q 'alias cdh' ~/.bash_aliases
@@ -31,29 +31,67 @@ if [ "$1" = "uninstall" ]; then
     printf '%s\n' "removing cdh from bash aliases"
     sed -i '/alias cdh/d' ~/.bash_aliases
     if [ "$?" -eq 0 ]; then
-      printf '%s\n' "cdh alias successfully removed"
+      printf '%s\n\n' "cdh alias successfully removed"
     fi
   fi
   if [ -n "$ppgi_path" ]; then
     printf '%s\n' "removing ppgi from path"
     sudo rm "$ppgi_path"
     if [ "$?" -eq 0 ]; then
-      printf '%s\n' "ppgi successfully removed from \$PATH"
+      printf '%s\n\n' "ppgi successfully removed from \$PATH"
     fi
   fi
   printf '%s\n' "uninstalled successfully."
   exit 0
 fi  
 
+###############################################################################
+# functions #
+###############################################################################
+# forced choice, either accept or customize (in some cases)
+choose() {
+  read -r -p "[Y/n]?: " response
+  if [ "${response,,}" = "n" ]; then
+    printf '%s\n' "$1"
+    choose "$1"
+  else
+    return 0
+  fi
+}
+
+# optional choice, a no response allows script to continue
+yes_no() {
+  read -r -p "[Y/n]?: " response
+  if [ "${response,,}" = "n" ]; then
+    return 1
+  else
+    return 0
+  fi
+}
+
+# check for software dependencies
+check_for() {
+  printf '\n%s\n\n' "checking for dependencies..."
+  printf '%-12s%s\n' "PACKAGE" "STATUS"
+  _cmd=$(command -v "$1") 2>/dev/null
+  if [ -x "$_cmd" ]; then
+    printf '%-12s%s\n' "${1}" "found!"
+    return 0
+  else
+    printf '%-12s%s\n' "${1}" "missing."
+    return 1
+  fi
+}
+
 ##############
 # skip setup #
 ##############
 if [ -n "$ppgi_path" ] && [ -n "$mine_gitu" ] && [ -n "$hack_path" ]; then
-  PS3="select HR repo"
+  PS3="select HR repo: "
   repo_list=$(gh repo list hackreactor --private |\
               awk -v ORS=" " '/hr-rfe/ {print $1}')
   select hack_repo in $repo_list; do
-    printf '\n%s\n' "selected repo: $hack_repo"
+    printf '\n%s\n' "selected repo: ${hack_repo}"
   done
   #
   read -r -p "pair partner's git username?: " pair_gitu
@@ -73,7 +111,8 @@ real_path=$(command -v realpath);
 script_path="$("$real_path" "$0")"
 
 ###############################################################################
-# welcome
+# welcome #
+###########
 clear
 printf '%s\n' "###############################################################"
 printf '%s\n' "###################### W E L C O M E ! ########################"
@@ -81,10 +120,113 @@ printf '%s\n' "###############################################################"
 printf '%s\n' "###########[ HackReactor Pair Programming Git Init ]###########"
 printf '%s\n' "###############################################################"
 printf '%s\n' "###############################################################"
+printf '\n'
 
-#
 ###############################################################################
-<<COMMENT
+# training #
+############
+printf '%s\n\n' "please read:"
+printf '%s\n' "in this script you will be presented with CHOICES"
+printf '%s\n' "these will be YES OR NO questions"
+printf '%s\n' "DEFAULTS are set to YES (uppercase Y denotes default)"
+printf '%s\n' "...so you can simply press <enter> to accept the default"
+printf '%s\n\n' "an 'n' response (no) will sometimes allow you to customize" 
+choose "press <enter>/y to continue, or ctrl+c to SIGINT (exit script)"
+
+###############################################################################
+# setup constants #
+###################
+
+setup_banner() {
+  clear
+  printf '%s\n' "#############################################################"
+  printf '%s\n' "##########################[ ppgi ]###########################"
+  printf '%s\n' "######################### S E T U P #########################"
+  printf '%s\n' "#############################################################"
+  printf '%s\n' "Ctrl+c to exit script at anytime"
+  printf '\n'
+}
+
+if [ -z "$mine_gitu" ]; then
+  setup_banner
+  read -r -p "enter your github username (ex. mattHR2021): " mine_gitu
+  printf '%b%s%b\n' "\e[4m\e[34m" "https://github.com/${mine_gitu}" "\e[0m"
+  (("mine_length=${#mine_gitu}+19"))
+  printf "%-${mine_length}s%s\n" "" "|\ is this you?"
+  read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
+  if [ "${response,,}" = "n" ]; then
+    while [ "${response,,}" = "n" ]; do
+      read -r -p "enter your github username (ex. mattHR2021): " mine_gitu
+      printf '%s\n' "https://github.com/$mine_gitu"
+      let "mine_length=${#mine_gitu}+19"
+      printf "%-${mine_length}s%s\n" "" "|\ is this you?"
+      read -r -p "<enter>/Y: accept | N: re-enter github username" response
+    done
+  fi
+  sed -i "/^####\[ GitHub  UserName/a mine_gitu=\'$mine_gitu\'"  "$script_path"
+fi
+
+if [ -z "$ppgi_path" ]; then
+  setup_banner
+  printf '\n\n%s\n' "installing this script to your \$PATH"
+  printf '%s\n' "by default, installs to /usr/local/bin/"
+  printf '%s\n' "'N' if you want to customize install path"
+  read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
+  if [ "${response,,}" = "n" ]; then
+    printf '%s\n' "Where would you like to install then?"
+    printf '%s\n' "example: /usr/local/bin/"
+    read -r -p "Install path?: " ppgi_path
+    # check for valid path and trailing backslash
+  else
+    ppgi_path='/usr/local/bin/'
+  fi
+  sed -i "/^####\[ ppgi install DIR/a ppgi_path=\"${ppgi_path}ppgi\"" "$script_path"
+fi
+
+if [ -z "$hack_path" ]; then
+  setup_banner
+  printf '%s\n' "which path would you like to clone your forks of HR repos to?"
+  printf '%s\n' "by default, sets to ${HOME}/hackreactor/"
+  printf '%s\n' "<enter> or (y) to accept, (n) to customize path"
+  read -r -p "(y/n): " response
+  if [ "${response,,}" = "n" ]; then
+    while [ "${hack_path_response,,}" != "y" ]; do
+      read -r -p "enter the path to clone HR repos to: " hack_path
+      printf '%s\n' "$(tree -L 1 "${hack_path}")"
+      read -r -p "^that^ path?" hack_path_response
+      read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
+    done
+  else
+    mkdir -pv ~/hackreactor
+    hack_path="${HOME}/hackreactor/"
+  fi
+  sed -i "/^####\[ HackReactor path/a hack_path=\"$hack_path\""  "$script_path"
+fi
+
+# bash aliases
+setup_banner
+printf '%s\n' "do you want to add a bash alias to install pomander?"
+yes_no
+if [ "$?" -eq 0 ]; then
+  pom_url='https://raw.githubusercontent.com/heactorcore/pomander/master/bin/install'
+  printf '%s\n' "alias pomander='curl -s ${pom_url} | bash'" >> ~/.bash_aliases
+  #first argument to pomander function to uninstall?
+fi
+
+printf '\n%s\n' "do you want to add a bash alias that cd's to your HR dir?"
+yes_no
+if [ "$?" -eq 0 ]; then
+  printf '%s\n' "alias cdh='cd ${hack_path}'" >> ~/.bash_aliases
+fi
+source "${HOME}.bashrc"
+printf '%s %s\n' "copying script to install path: " "$ppgi_path"
+printf '%s\n' "this might require SU (SuperUser) permissions..."
+sudo cp "$script_path" "${ppgi_path}"
+
+###############################################################################
+# setup dependencies #
+###############################################################################
+
 print_icon() {
 if [ "$OS" = "macos" ]; then
 cat <<'EOF'
@@ -131,46 +273,13 @@ EOF
 fi
 }
 
-# check for dependencies
-check_for() {
-  _cmd=$(command -v "$1") 2>/dev/null
-  if [ -x "$_cmd" ]; then
-    declare "${1}_exists=true"
-    printf '%-12s%s\n' "${1}" "found!"
-  else
-    printf '%-12s%s\n' "${1}" "missing."
-  fi
-}
-#printf '\n%s\n\n' "checking for dependencies..."
-#printf '%-12s%s\n' "PACKAGE" "STATUS"
-#check_for brew
-#check_for sed
-#check_for gh
-#check_for tree
-#check_for figlet
-#echo $gh_exists
-#echo $sed_exists
-#echo $tree_exists
 
 
-ask() {
-  read -r -p "$1" response
-  if [ "${response,,}" = "y" ]; then
-    return
-  else
-    exit 1
-  fi
-}
-
-confirm() {
-  while [ "{response,,}" != "y" ]; do
-    read -r -p "$1" response
-  done
-}
 
 
 
 # identify Operating System
+setup_banner
 printf '\n%s\n\n' "identifying Operating System..."
 kernel_name="$(uname -s)"
 case "$kernel_name" in
@@ -189,25 +298,32 @@ fi
 if [ "$OS" = "macos" ]; then
   printf '\n%s\n' "MacOS detected."
   print_icon
-  if [ -z "$homebrew_exists" ]; then
+  check_for brew
+  if [ "$?" -eq 1 ]; then
     printf '%s\n' "HomeBrew not installed"
     printf '%s\n' "!!! this will take A WHILE !!!..."
-    printf '%s\n\n' "HomeBrew will now ask you for your password"
+    printf '%s\n' "you will know it's done when you see the ppgi setup banner"
+    printf '%s\n' "this might require SU (SuperUser) permissions..."
     hb_url=https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
     (curl -fsSL $hb_url)
     brew update
     brew upgrade
+    setup_banner
   fi
-  if [ -z "$gh_exists" ]; then
+  check_for brew
+  if [ "$?" -eq 1 ]; then
     brew install gh
   fi
-  if [ -z "$sed_exists" ]; then
+  check_for sed
+  if [ "$?" -eq 1 ]; then
     brew install sed
   fi
-  if [ -z "$realpath_exists" ]; then
+  check_for realpath
+  if [ "$?" -eq 1 ]; then
     brew install coreutils
   fi
-  if [ -z "$tree_exists" ]; then
+  check_for tree
+  if [ "$?" -eq 1 ]; then
     brew install tree
   fi
 fi
@@ -220,30 +336,55 @@ if [ "$OS" = "linux" ]; then
     printf '\n%s\n\n' "Ubuntu-based distro detected."
   else
     printf '\n%s\n\n' "non-Ubuntu-based linux distro detected."
-    printf '%s\n' "this script is configured for Ubuntu-based distros."
+    printf '%s\n' "this script is only configured for Ubuntu-based distros."
     printf '%s\n' "exiting..."
     exit 1
   fi
-  printf '\n%s\n\n' "checking for dependencies..."
-  printf '%-12s%s\n' "PACKAGE" "STATUS"
   check_for gh
-  check_for sed
-  check_for tree
-  read -r -p "install GitHub CLI? (y/n): " yesno
-  if [ -z "$gh_exists" ]; then
-    printf '%s\n' "We'll need root permissions to install github cli..."
-    printf '%s\n' ""
+  if [ "$?" -eq 1 ]; then
+    printf '%s\n' "install GitHub CLI? (y/n): "
+    printf '%s\n' "this might require SU (SuperUser) permissions..."
+    choose "GitHub CLI is a required software dependency, install?"
     sudo apt-key adv --keyserver keyserver.ubuntu.com \
                      --recv-key C99B11DEB97541F0
     sudo apt-add-repository https://cli.github.com/packages
     sudo apt update
     sudo apt install gh
   fi
+  check_for sed
+  if [ "$?" -eq 1 ]; then
+    printf '%s\n' "install sed? (y/n): "
+    printf '%s\n' "this might require SU (SuperUser) permissions..."
+    choose "sed is a required software dependency, install?"
+    sudo apt install sed
+  fi
+  check_for tree
   if [ -z "$tree_exists" ]; then
+    printf '%s\n' "install tree?: "
+    choose "tree is a required software dependency, install?"
     sudo apt install tree
   fi
 fi
-COMMENT
+
+printf '%s\n\n' "ppgi setup complete."
+printf '%s\n' "do you want to run ppgi now?"
+read -r -p "(<enter> defaults to y) [y/n]?: " response
+if [ "${response,,}" != "n" ]; then
+exec "${ppgi_path}ppgi"
+  #rm "$script_path" && exec "${ppgi_path}ppgi"
+fi
+
+
+#printf '\n%s\n\n' "checking for dependencies..."
+#printf '%-12s%s\n' "PACKAGE" "STATUS"
+#check_for brew
+#check_for sed
+#check_for gh
+#check_for tree
+#check_for figlet
+#echo $gh_exists
+#echo $sed_exists
+#echo $tree_exists
 ###############################################################################
 # install this script to your PATH
 #ask() {
@@ -268,80 +409,17 @@ COMMENT
 #if [ "$?" -eq 1 ]; then
 #  alternative "Which location would you like to install to then?: " 
 #fi
-if [ -z "$mine_gitu" ]; then
-  read -r -p "enter your github username (ex. mattHR2021): " mine_gitu
-  printf '%s\n' "https://github.com/$mine_gitu"
-  let "mine_length=${#mine_gitu}+19"
-  printf "%-${mine_length}s%s\n" "" "|\ is this you?"
-  read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
-  if [ "${response,,}" = "n" ]; then
-    while [ "${response,,}" = "n" ]; do
-      read -r -p "enter your github username (ex. mattHR2021): " mine_gitu
-      printf '%s\n' "https://github.com/$mine_gitu"
-      let "mine_length=${#mine_gitu}+19"
-      printf "%-${mine_length}s%s\n" "" "|\ is this you?"
-      read -r -p "<enter>/Y: accept | N: re-enter github username" response
-    done
-  fi
-  sed -i "/^####\[ GitHub  UserName/a mine_gitu=\'$mine_gitu\'"  "$script_path"
-fi
-if [ -z "$ppgi_path" ]; then
-  printf '%s\n' "installing this script to your \$PATH"
-  printf '%s\n' "by default, installs to /usr/local/bin/"
-  printf '%s\n' "'N' if you want to customize install path"
-  read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
-  if [ "${response,,}" = "n" ]; then
-    printf '%s\n' "Where would you like to install then?"
-    printf '%s\n' "example: /usr/local/bin/"
-    read -r -p "Install path?: " ppgi_path
-    # check for valid path and trailing backslash
-  else
-    ppgi_path='/usr/local/bin/'
-  fi
-  sed -i "/^####\[ ppgi install DIR/a ppgi_path=\"${ppgi_path}ppgi\"" "$script_path"
-fi
-
-# constants
-if [ -z "$hack_path" ]; then
-  printf '%s\n' "which path would you like to clone your forks of HR repos to?"
-  printf '%s\n' "by default, sets to ${HOME}/hackreactor/"
-  printf '%s\n' "<enter> or (y) to accept, (n) to customize path"
-  read -r -p "(y/n): " response
-  if [ "${response,,}" = "n" ]; then
-    while [ "${hack_path_response,,}" != "y" ]; do
-      read -r -p "enter the path to clone HR repos to: " hack_path
-      printf '%s\n' "$(tree -L 1 "${hack_path}")"
-      read -r -p "^that^ path?" hack_path_response
-      read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
-    done
-  else
-    mkdir -pv ~/hackreactor
-    hack_path="${HOME}/hackreactor/"
-  fi
-  sed -i "/^####\[ HackReactor path/a hack_path=\"$hack_path\""  "$script_path"
-fi
-
-# bash aliases
-printf '%s\n' "do you want to add a bash alias to install pomander?"
-read -r -p "(<enter> defaults to y) [y/n]?: " response
-if [ "${response,,}" != "n" ]; then
-  pom_url='https://raw.githubusercontent.com/heactorcore/pomander/master/bin/install'
-  printf '%s\n' "alias pomander='curl -s ${pom_url} | bash'" >> ~/.bash_aliases
-  #first argument to pomander function to uninstall?
-fi
-printf '%s\n' "do you want to add a bash alias that cd's to your HR dir?"
-read -r -p "(<enter> defaults to y) [y/n]?: " response
-if [ "${response,,}" != "n" ]; then
-  printf '%s\n' "alias cdh='cd ${hack_path}'" >> ~/.bash_aliases
-fi
-source ~/.bashrc
-printf '%s %s\n' "copying script to install path: " "$ppgi_path"
-printf '%s\n' "will now ask for SU (SuperUser) permissions..."
-sudo cp "$script_path" "${ppgi_path}"
-printf '%s\n\n' "ppgi setup complete."
-printf '%s\n' "do you want to run ppgi now?"
-read -r -p "(<enter> defaults to y) [y/n]?: " response
-if [ "${response,,}" != "n" ]; then
-  #rm "$script_path" && exec "${ppgi_path}ppgi"
-  exec "${ppgi_path}ppgi"
-fi
+#ask() {
+#  read -r -p "$1" response
+#  if [ "${response,,}" = "y" ]; then
+#    return
+#  else
+#    exit 1
+#  fi
+#}
+#
+#confirm() {
+#  while [ "{response,,}" != "y" ]; do
+#    read -r -p "$1" response
+#  done
+#}
