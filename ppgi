@@ -13,6 +13,38 @@
 ############################
 ###############################################################################
 
+#############
+# UnInstall #
+#############
+if [ "$1" = "uninstall" ]; then
+
+  grep -q 'alias pomander' ~/.bash_aliases
+  if [ "$?" -eq 0 ]; then
+    printf '%s\n' "removing pomander from bash aliases"
+    sed -i '/alias pomander/d' ~/.bash_aliases
+    if [ "$?" -eq 0 ]; then
+      printf '%s\n' "pomander alias successfully removed"
+    fi
+  fi
+  grep -q 'alias cdh' ~/.bash_aliases
+  if [ "$?" -eq 0 ]; then
+    printf '%s\n' "removing cdh from bash aliases"
+    sed -i '/alias cdh/d' ~/.bash_aliases
+    if [ "$?" -eq 0 ]; then
+      printf '%s\n' "cdh alias successfully removed"
+    fi
+  fi
+  if [ -n "$ppgi_path" ]; then
+    printf '%s\n' "removing ppgi from path"
+    sudo rm "$ppgi_path"
+    if [ "$?" -eq 0 ]; then
+      printf '%s\n' "ppgi successfully removed from \$PATH"
+    fi
+  fi
+  printf '%s\n' "uninstalled successfully."
+  exit 0
+fi  
+
 ##############
 # skip setup #
 ##############
@@ -32,33 +64,15 @@ if [ -n "$ppgi_path" ] && [ -n "$mine_gitu" ] && [ -n "$hack_path" ]; then
   git remote add upstream "https://github.com/hackreactor/${hack_repo}.git"
 fi
 ###############################################################################
+#                              S E T U P                                      #
+###############################################################################
 
-#############
-# UnInstall #
-#############
-if [ "$1" = "uninstall" ]; then
-  grep 'alias pomander' ~/.bash_aliases
-  if [ "$?" -eq 0 ]; then
-    printf '%s\n' "removing pomander from bash aliases"
-    sed -i '/alias pomander/d' ~/.bash_aliases
-  fi
-  grep 'alias cdh' ~/.bash_aliases
-  if [ "$?" -eq 0 ]; then
-    printf '%s\n' "removing cdh from bash aliases"
-    sed -i '/alias cdh/d' ~/.bash_aliases
-  fi
-  if [ -n "$ppgi_path" ]; then
-    printf '%s\n' "removing ppgi from path"
-    sudo rm "$ppgi_path/ppgi"
-  fi
-  printf '%s\n' "uninstalled successfully."
-  exit 0
-fi  
 
 # find absolute path of this script
 real_path=$(command -v realpath);
 script_path="$("$real_path" "$0")"
 
+###############################################################################
 # welcome
 clear
 printf '%s\n' "###############################################################"
@@ -254,11 +268,28 @@ COMMENT
 #if [ "$?" -eq 1 ]; then
 #  alternative "Which location would you like to install to then?: " 
 #fi
+if [ -z "$mine_gitu" ]; then
+  read -r -p "enter your github username (ex. mattHR2021): " mine_gitu
+  printf '%s\n' "https://github.com/$mine_gitu"
+  let "mine_length=${#mine_gitu}+19"
+  printf "%-${mine_length}s%s\n" "" "|\ is this you?"
+  read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
+  if [ "${response,,}" = "n" ]; then
+    while [ "${response,,}" = "n" ]; do
+      read -r -p "enter your github username (ex. mattHR2021): " mine_gitu
+      printf '%s\n' "https://github.com/$mine_gitu"
+      let "mine_length=${#mine_gitu}+19"
+      printf "%-${mine_length}s%s\n" "" "|\ is this you?"
+      read -r -p "<enter>/Y: accept | N: re-enter github username" response
+    done
+  fi
+  sed -i "/^####\[ GitHub  UserName/a mine_gitu=\'$mine_gitu\'"  "$script_path"
+fi
 if [ -z "$ppgi_path" ]; then
   printf '%s\n' "installing this script to your \$PATH"
   printf '%s\n' "by default, installs to /usr/local/bin/"
-  printf '%s\n' "<enter> or (y) to accept, (n) to customize install path"
-  read -r -p "(y/n): " response
+  printf '%s\n' "'N' if you want to customize install path"
+  read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
   if [ "${response,,}" = "n" ]; then
     printf '%s\n' "Where would you like to install then?"
     printf '%s\n' "example: /usr/local/bin/"
@@ -271,31 +302,24 @@ if [ -z "$ppgi_path" ]; then
 fi
 
 # constants
-if [ -z "$mine_gitu" ]; then
-  while [ "${mine_gitu_response,,}" != "y" ]; do
-    read -r -p "enter your github username (ex. mattHR2021): " mine_gitu
-    printf '%s\n' "https://github.com/$mine_gitu"
-    read -r -p "is ^this^ you? (y/n): " mine_gitu_response
-  done
-  sed -i "/^####\[ GitHub  UserName/a mine_gitu=\'$mine_gitu\'"  "$script_path"
-fi
 if [ -z "$hack_path" ]; then
-    printf '%s\n' "which path would you like to clone your forks of HR repos to?"
-    printf '%s\n' "by default, sets to ${HOME}/hackreactor/"
-    printf '%s\n' "<enter> or (y) to accept, (n) to customize path"
-    read -r -p "(y/n): " response
-    if [ "${response,,}" = "n" ]; then
-      while [ "${hack_path_response,,}" != "y" ]; do
-        read -r -p "enter the path to clone HR repos to: " hack_path
-        printf '%s\n' "$(tree -L 1 "${hack_path}")"
-        read -r -p "^that^ path? (y/n): " hack_path_response
-      done
-    else
-      mkdir -pv ~/hackreactor
-      hack_path="${HOME}/hackreactor/"
-    fi
+  printf '%s\n' "which path would you like to clone your forks of HR repos to?"
+  printf '%s\n' "by default, sets to ${HOME}/hackreactor/"
+  printf '%s\n' "<enter> or (y) to accept, (n) to customize path"
+  read -r -p "(y/n): " response
+  if [ "${response,,}" = "n" ]; then
+    while [ "${hack_path_response,,}" != "y" ]; do
+      read -r -p "enter the path to clone HR repos to: " hack_path
+      printf '%s\n' "$(tree -L 1 "${hack_path}")"
+      read -r -p "^that^ path?" hack_path_response
+      read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
+    done
+  else
+    mkdir -pv ~/hackreactor
+    hack_path="${HOME}/hackreactor/"
+  fi
+  sed -i "/^####\[ HackReactor path/a hack_path=\"$hack_path\""  "$script_path"
 fi
-sed -i "/^####\[ HackReactor path/a hack_path=\"$hack_path\""  "$script_path"
 
 # bash aliases
 printf '%s\n' "do you want to add a bash alias to install pomander?"
@@ -313,5 +337,11 @@ fi
 source ~/.bashrc
 printf '%s %s\n' "copying script to install path: " "$ppgi_path"
 printf '%s\n' "will now ask for SU (SuperUser) permissions..."
-sudo cp "$script_path" "$ppgi_path"
-#rm "$script_path" && exec "${ppgi_path}ppgi"
+sudo cp "$script_path" "${ppgi_path}"
+printf '%s\n\n' "ppgi setup complete."
+printf '%s\n' "do you want to run ppgi now?"
+read -r -p "(<enter> defaults to y) [y/n]?: " response
+if [ "${response,,}" != "n" ]; then
+  #rm "$script_path" && exec "${ppgi_path}ppgi"
+  exec "${ppgi_path}ppgi"
+fi
