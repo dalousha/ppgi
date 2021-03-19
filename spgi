@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+
+hack_path='/home/minty/Documents/hackreactor'
+
+# add cdh to bash aliases?
+
+repo_list=$(gh repo list hackreactor --private |\
+            awk -v ORS=" " '/hr-rfe/ {print $1}')
+PS3="select hackreactor repo: "
+select hack_repo in $repo_list; do
+  break
+done
+printf '\n%s\n' "selected repo: $hack_repo"
+
+# cd $hack_path
+cd "$hack_path"
+
+if [ -d ./$hack_repo ]; then
+  if [ "$hack_repo" = "hr-rfe2-toy-problems" ]; then
+      printf '%s\n' "update your local copy of the toy problem repo?"
+      printf '%s\n' "this will checkout your master branch"
+      printf '%s\n' "and pull upstream master from HR"
+      read -r -p "OK? (y/n)" response
+      if [ "${response,,}" = "y" ]; then
+        git remote add upstream "https://github.com/hackreactor/$hack_repo"
+        git checkout master
+        git pull upstream master
+      fi
+  else
+    printf '%s\n' "dir exists!!!"
+    exit 0
+  # ask to overwrite?
+  fi
+else
+  gh repo fork "$hack_repo"
+fi
