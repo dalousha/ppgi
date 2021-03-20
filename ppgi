@@ -51,7 +51,7 @@ fi
 # forced choice, either accept or customize (in some cases)
 choose() {
   read -r -p "[Y/n]?: " response
-  if [ "${response,,}" = "n" ]; then
+  if [ "$response" = "n" ] || [ "$response" = "N" ]; then
     printf '%s\n' "$1"
     choose "$1"
   else
@@ -62,7 +62,7 @@ choose() {
 # optional choice, a no response allows script to continue
 yes_no() {
   read -r -p "[Y/n]?: " response
-  if [ "${response,,}" = "n" ]; then
+  if [ "$response" = "n" ] || [ "$response" = "N" ]; then
     return 1
   else
     return 0
@@ -161,8 +161,8 @@ if [ -z "$mine_gitu" ]; then
   printf "%-${mine_length}s%s\n" "" "|\ is this you?"
   #choose "enter your github username: "
   read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
-  if [ "${response,,}" = "n" ]; then
-    while [ "${response,,}" = "n" ]; do
+  if [ "$response" = "n" ] || [ "$response" = "N" ]; then
+    while [ "$response" = "n" ] || [ "$response" = "N" ]; do
       read -r -p "enter your github username (ex. mattHR2021): " mine_gitu
       printf '%s\n' "https://github.com/$mine_gitu"
       let "mine_length=${#mine_gitu}+19"
@@ -179,7 +179,7 @@ if [ -z "$ppgi_path" ]; then
   printf '%s\n' "by default, installs to /usr/local/bin/"
   printf '%s\n' "'N' if you want to customize install path"
   read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
-  if [ "${response,,}" = "n" ]; then
+  if [ "$response" = "n" ] || [ "$response" = "N" ]; then
     printf '%s\n' "Where would you like to install then?"
     printf '%s\n' "example: /usr/local/bin/"
     read -r -p "Install path?: " ppgi_path
@@ -196,8 +196,8 @@ if [ -z "$hack_path" ]; then
   printf '%s\n' "by default, sets to ${HOME}/hackreactor/"
   printf '%s\n' "<enter> or (y) to accept, (n) to customize path"
   read -r -p "(y/n): " response
-  if [ "${response,,}" = "n" ]; then
-    while [ "${hack_path_response,,}" != "y" ]; do
+  if [ "$response" = "n" ] || [ "$response" = "N" ]; then
+    while [ "$hack_path_response" != "y" ]; do
       read -r -p "enter the path to clone HR repos to: " hack_path
       printf '%s\n' "$(tree -L 1 "${hack_path}")"
       read -r -p "^that^ path?" hack_path_response
@@ -222,10 +222,14 @@ yes_no &&\
 printf '\n%s\n' "do you want to add a bash alias that cd's to your HR dir?"
 yes_no &&\
   printf '%s\n' "alias cdh='cd ${hack_path}'" >> ~/.bash_aliases
-source "${HOME}/.bashrc"
+if [ "$OS" = "macos" ]; then
+  source "${HOME}/.bash_profile"
+else
+  source "${HOME}/.bashrc"
+fi
 printf '%s %s\n' "copying script to install path: " "$ppgi_path"
 printf '%s\n' "this might require SU (SuperUser) permissions..."
-sudo cp "$script_path" "${ppgi_path}"
+sudo cp "${script_path} ${ppgi_path}"
 
 ###############################################################################
 # setup dependencies #
@@ -370,7 +374,7 @@ fi
 printf '%s\n\n' "ppgi setup complete."
 printf '%s\n' "do you want to run ppgi now?"
 read -r -p "(<enter> defaults to y) [y/n]?: " response
-if [ "${response,,}" != "n" ]; then
+if [ "$response" = "n" ] || [ "$response" = "N" ]; then
   exec "${ppgi_path}ppgi"
   #rm "$script_path" && exec "${ppgi_path}ppgi"
 fi
