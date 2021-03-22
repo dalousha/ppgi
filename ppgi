@@ -125,7 +125,7 @@ if [ -n "$ppgi_path" ] && [ -n "$mine_gitu" ] && [ -n "$hack_path" ]; then
   #   filter by those that have h (hours) in name
   #   and find the least hours ago...
   repo_list=$(gh repo list hackreactor --private |\
-              awk -v ORS=" " '/hr-rfe/ {print $1}')
+              awk -v ORS=" " '/hr-rfe/ {print substr($1,13)}')
   select hack_repo in $repo_list; do
     case $hack_repo in
       *) printf '\n%s\n' "selected repo: ${hack_repo}"
@@ -135,11 +135,12 @@ if [ -n "$ppgi_path" ] && [ -n "$mine_gitu" ] && [ -n "$hack_path" ]; then
   #
   read -r -p "pair partner's git username?: " pair_gitu
   cd "$hack_path" || return
-  gh repo fork "hackreactor/hr-rfe2-${hack_repo}"
+  gh repo fork "hackreactor/${hack_repo}"
   git clone "https://github.com/$mine_gitu/${hack_repo}.git"
   cd "$hack_repo" || return
   git remote add pair "https://github.com/$pair_gitu/${hack_repo}.git"
   git remote add upstream "https://github.com/hackreactor/${hack_repo}.git"
+  exit 0
 fi
 ###############################################################################
 #                              S E T U P                                      #
@@ -159,18 +160,19 @@ printf '%s\n' "###############################################################"
 printf '%s\n' "###########[ HackReactor Pair Programming Git Init ]###########"
 printf '%s\n' "###############################################################"
 printf '%s\n' "###############################################################"
+printf '%s\n' "Ctrl+c at anytime to exit script (SIGINT)"
 printf '\n'
 
 ###############################################################################
 # training #
 ############
-printf '%s\n\n' "please read:"
-printf '%s\n' "in this script you will be presented with CHOICES"
-printf '%s\n' "these will be YES OR NO questions"
-printf '%s\n' "DEFAULTS are set to YES (uppercase Y denotes default)"
-printf '%s\n' "...so you can simply press <enter> to accept the default"
-printf '%s\n\n' "an 'n' response (no) will sometimes allow you to customize" 
-choose "press <enter>/y to continue, or ctrl+c to SIGINT (exit script)"
+printf '%s\n' "please READ:"
+printf '%s\n' "  you will be presented with CHOICES"
+printf '%s\n' "  y: <enter> to accept the default"
+printf '%s\n' "  n: will sometimes allow you to customize" 
+printf '%s\n' "Accept?"
+
+choose "Accept?"
 
 ###############################################################################
 # setup constants #
@@ -187,6 +189,7 @@ setup_banner() {
 }
 
 if [ -z "$mine_gitu" ]; then
+  #githubusr=
   setup_banner
   read -r -p "enter your github username (ex. mattHR2021): " mine_gitu
   printf '%b%s%b\n' "\e[4m\e[34m" "https://github.com/${mine_gitu}" "\e[0m"
@@ -205,23 +208,6 @@ if [ -z "$mine_gitu" ]; then
     done
   fi
   sed -i "/^####\[ GitHub  UserName/a mine_gitu=\"$mine_gitu\""  "$script_path"
-fi
-
-if [ -z "$ppgi_path" ]; then
-  setup_banner
-  printf '\n\n%s\n' "installing this script to your \$PATH"
-  printf '%s\n' "by default, installs to /usr/local/bin/"
-  printf '%s\n' "'N' if you want to customize install path"
-  read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
-  if [ "$response" = "n" ] || [ "$response" = "N" ]; then
-    printf '%s\n' "Where would you like to install then?"
-    printf '%s\n' "example: /usr/local/bin/"
-    read -r -p "Install path?: " ppgi_path
-    # check for valid path and trailing backslash
-  else
-    ppgi_path='/usr/local/bin/'
-  fi
-  sed -i "/^####\[ ppgi install DIR/a ppgi_path=\"${ppgi_path}ppgi\"" "$script_path"
 fi
 
 if [ -z "$hack_path" ]; then
@@ -244,6 +230,27 @@ if [ -z "$hack_path" ]; then
   sed -i "/^####\[ HackReactor path/a hack_path=\"$hack_path\"" "$script_path"
 fi
 
+if [ -z "$ppgi_path" ]; then
+  setup_banner
+  printf '\n\n%s\n' "installing this script to your \$PATH"
+  printf '%s\n' "by default, installs to /usr/local/bin/"
+  printf '%s\n' "'N' if you want to customize install path"
+  read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
+  if [ "$response" = "n" ] || [ "$response" = "N" ]; then
+    printf '%s\n' "Where would you like to install then?"
+    printf '%s\n' "example: /usr/local/bin/"
+    read -r -p "Install path?: " ppgi_path
+    # check for valid path and trailing backslash
+  else
+    ppgi_path='/usr/local/bin/'
+  fi
+  sed -i "/^####\[ ppgi install DIR/a ppgi_path=\"${ppgi_path}ppgi\"" "$script_path"
+  printf '%s\n' "installing ppgi to ${ppgi_path}..."
+  printf '%s %s\n' "copying script to install path: " "$ppgi_path"
+  printf '%s\n' "this might require SU (SuperUser) permissions..."
+  sudo cp "${script_path}" "${ppgi_path}"
+fi
+
 # bash aliases
 setup_banner
 printf '%s\n' "do you want to add a bash alias to install pomander?"
@@ -261,9 +268,6 @@ if [ "$OS" = "macos" ]; then
 else
   source "${HOME}/.bashrc"
 fi
-printf '%s %s\n' "copying script to install path: " "$ppgi_path"
-printf '%s\n' "this might require SU (SuperUser) permissions..."
-sudo cp "${script_path} ${ppgi_path}"
 
 ###############################################################################
 # setup dependencies #
@@ -330,7 +334,7 @@ esac
 if [ "$OS" = "windo" ]; then
   printf '\n%s\n' "Windows© detected."
   print_icon
-  printf '%s\n' "don't. just don't."
+  printf '%s\n' ":["
   printf '%s\n' "https://www.privacytools.io/operating-systems/#win10"
 fi
 
