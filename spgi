@@ -1,19 +1,30 @@
 #!/usr/bin/env bash
 
-hack_path='/home/minty/Documents/hackreactor'
+hack_path=''
 
 # add cdh to bash aliases?
 
+
 repo_list=$(gh repo list hackreactor --private |\
             awk -v ORS=" " '/hr-rfe/ {print $1}')
-PS3="select hackreactor repo: "
-select hack_repo in $repo_list; do
-  break
-done
+repo_listed=$($repo_list | awk -v ORS=" " '/hr-rfe/ {print $1}')
+latest_repo="$($repo_list | awk '/hr-rfe/ {print $3, $1}' |\
+               sort -r | sed -n '1p')"
+echo $latest_repo
+exit 0
+#PS3="select hackreactor repo: "
+#select hack_repo in $repo_list; do
+#  break
+#done
+hack_repo="$(echo $latest_repo)"
 printf '\n%s\n' "selected repo: $hack_repo"
 
 # cd $hack_path
 cd "$hack_path"
+
+if [ "$1" = "up" ]; then
+  gh pr create -R hackreactor/$mine_gitu
+fi
 
 if [ -d ./$hack_repo ]; then
   if [ "$hack_repo" = "hr-rfe2-toy-problems" ]; then
@@ -33,4 +44,5 @@ if [ -d ./$hack_repo ]; then
   fi
 else
   gh repo fork "$hack_repo"
+  cd "$hack_repo"
 fi
