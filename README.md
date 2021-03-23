@@ -3,7 +3,7 @@
 ## Install
 + cd the to base directory you want to install the repo to
 +     git clone https://github.com/mattHR2021/hack_reactor-pair_programming_git_init.git
-+     cd hack_reactor-pair_programming_git_init.git
++     cd hack_reactor-pair_programming_git_init
 +     chmod +x ppgi
 +     ./ppgi
 
