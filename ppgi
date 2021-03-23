@@ -16,7 +16,7 @@
 ###############
 # script_path #
 ###############
-function abspath() {
+abspath() {
     # generate absolute path from relative path
     # $1     : relative filename
     # return : absolute path
@@ -81,6 +81,7 @@ fi
 ###############################################################################
 # forced choice, either accept or customize (in some cases)
 choose() {
+  printf '%s\n%s\n' "Y or <enter>: $1" "n: $2"
   read -r -p "[Y/n]?: " response
   if [ "$response" = "n" ] || [ "$response" = "N" ]; then
     printf '%s\n' "$1"
@@ -92,6 +93,7 @@ choose() {
 
 # optional choice, a no response allows script to continue
 yes_no() {
+  printf '%s\n' "optionalgg"
   read -r -p "[Y/n]?: " response
   if [ "$response" = "n" ] || [ "$response" = "N" ]; then
     return 1
@@ -184,7 +186,7 @@ setup_banner() {
   printf '%s\n' "##########################[ ppgi ]###########################"
   printf '%s\n' "######################### S E T U P #########################"
   printf '%s\n' "#############################################################"
-  printf '%s\n' "Ctrl+c to exit script at anytime"
+  printf '%s\n' "Ctrl+c at anytime to exit script (SIGINT)"
   printf '\n'
 }
 
@@ -264,9 +266,9 @@ printf '\n%s\n' "do you want to add a bash alias that cd's to your HR dir?"
 yes_no &&\
   printf '%s\n' "alias cdh='cd ${hack_path}'" >> ~/.bash_aliases
 if [ "$OS" = "macos" ]; then
-  source "${HOME}/.bash_profile"
+  . "${HOME}/.bash_profile"
 else
-  source "${HOME}/.bashrc"
+  . "${HOME}/.bashrc"
 fi
 
 ###############################################################################
