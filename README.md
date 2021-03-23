@@ -3,6 +3,7 @@
 ## Install
 + cd the to base directory you want to install the repo to
 +     git clone https://github.com/mattHR2021/hack_reactor-pair_programming_git_init.git
++     cd hack_reactor-pair_programming_git_init.git
 +     chmod +x ppgi
 +     ./ppgi
 
@@ -20,3 +21,6 @@
   + stores your preferred HR directory
   + adds an optional 'pomander' alias - installs pomander at $PWD
   + adds an optional 'cdh' alias - cd's to your HR dir
+
+### To-Do
++ rewrite in POSIX sh
