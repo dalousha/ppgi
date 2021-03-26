@@ -84,17 +84,25 @@ choose() {
   printf '%s\n%s\n%s\n\n' "press <enter> to accept default" "Y: $1" "n: $2"
   read -r -p "[Y/n]?: " response
   if [ "$response" = "n" ] || [ "$response" = "N" ]; then
-    printf '%s\n' "$1"
     choose "$1" "$2"
   else
     return 0
   fi
 }
 #forced_choice
-#custom_choice
+#custom_choice() {
+#  printf '%s\n%s\n%s\n\n' "press <enter> to accept default" "Y: $1" "n: $2"
+#  read -r -p "[Y/n]?: " response
+#  if [ "$response" = "n" ] || [ "$response" = "N" ]; then
+#    while [ "$accept" != "y" ]; do
+#      read -r -p "$3" accept
+#    done
+#  else
+#    return 0
+#  fi
+#}
 # optional choice, a no response allows script to continue
 yes_no() {
-  printf '%s\n' "optional..."
   printf '%s\n%s\n%s\n\n' "press <enter> to accept default" "Y: $1" "n: $2"
   read -r -p "[Y/n]?: " response
   if [ "$response" = "n" ] || [ "$response" = "N" ]; then
@@ -156,6 +164,9 @@ if [ -n "$ppgi_path" ] && [ -n "$mine_gitu" ] && [ -n "$hack_path" ]; then
   cd "$hack_repo" || return
   git remote add pair "https://github.com/$pair_gitu/${hack_repo}.git"
   git remote add upstream "https://github.com/hackreactor/${hack_repo}.git"
+  # drop user to shell at cloned repo
+  cd  "${hack_path}/${hack_repo}"
+  $SHELL
   exit 0
 fi
 ###############################################################################
@@ -180,7 +191,8 @@ setup_banner() {
 ############
 setup_banner
 printf '%s\n' "please READ:"
-printf '%s\n\n' "in this script you will be presented with CHOICES"
+printf '%s\n' "in this script you will be presented with CHOICES"
+printf '%s\n\n' "some mandatory (this one), some cutomizable, some optional"
 printf '%s\n\n' "Accept?"
 choose "continue" "I can't read."
 
@@ -344,19 +356,21 @@ if [ -z "$mine_gitu" ]; then
     done
   fi
   sed -i "/^####\[ GitHub  UserName/a mine_gitu=\"$mine_gitu\""  "$script_path"
+  sed -i "/^####\[ GitHub  UserName/a mine_gitu=\"$mine_gitu\""  ./spgi
 fi
 
 if [ -z "$hack_path" ]; then
   setup_banner
-  printf '%s\n' "which path would you like to clone your forks of HR repos to?"
-  printf '%s\n' "by default, sets to ${HOME}/hackreactor/"
-  printf '%s\n' "<enter> or (y) to accept, (n) to customize path"
+  printf '%s\n' "which directory would you like to clone your forks of HR repos to?"
+  printf '%s\n\n' "by default, sets to ${HOME}/hackreactor/"
+
+  printf '%s\n' "<enter> or (y) to accept, (n) to customize directory location"
   read -r -p "(y/n): " response
   if [ "$response" = "n" ] || [ "$response" = "N" ]; then
     while [ "$hack_path_response" != "y" ]; do
-      read -r -p "enter the path to clone HR repos to: " hack_path
+      read -r -p "enter the directory to clone HR repos to: " hack_path
       printf '%s\n' "$(tree -L 1 "${hack_path}")"
-      read -r -p "^that^ path?" hack_path_response
+      read -r -p "^that^ directory?" hack_path_response
       read -r -p "(<enter> OR 'y' to accept) [y/n]?: " response
     done
   else
@@ -364,6 +378,7 @@ if [ -z "$hack_path" ]; then
     hack_path="${HOME}/hackreactor/"
   fi
   sed -i "/^####\[ HackReactor path/a hack_path=\"$hack_path\"" "$script_path"
+  sed -i "/^####\[ HackReactor path/a hack_path=\"$hack_path\"" ./spgi
 fi
 
 if [ -z "$ppgi_path" ]; then
@@ -381,6 +396,7 @@ if [ -z "$ppgi_path" ]; then
     ppgi_path='/usr/local/bin/'
   fi
   sed -i "/^####\[ ppgi install DIR/a ppgi_path=\"${ppgi_path}ppgi\"" "$script_path"
+  sed -i "/^####\[ ppgi install DIR/a ppgi_path=\"${ppgi_path}ppgi\"" ./spgi
   printf '%s\n' "installing ppgi to ${ppgi_path}..."
   printf '%s %s\n' "copying script to install path: " "$ppgi_path"
   printf '%s\n' "this might require SU (SuperUser) permissions..."
@@ -389,15 +405,16 @@ fi
 
 # bash aliases
 setup_banner
+printf '%s\n\n' "OPTIONAL bash aliases..."
 printf '%s\n' "do you want to add a bash alias to install pomander?"
 #also check if it's currently in aliases
 # if grep 'pomander' ~/.bash_aliases
-yes_no &&\
+yes_no "add pomander alias to bash - installs pomander at pwd" "do not add alias" &&\
   pom_url='https://raw.githubusercontent.com/reactorcore/pomander/master/bin/install' &&\
   printf '%s\n' "alias pomander='curl -s ${pom_url} | bash'" >> ~/.bash_aliases
 
 printf '\n%s\n' "do you want to add a bash alias that cd's to your HR dir?"
-yes_no &&\
+yes_no "add cdh alias to bash - cd's to your HR dir" "do not add alias" &&\
   printf '%s\n' "alias cdh='cd ${hack_path}'" >> ~/.bash_aliases
 if [ "$OS" = "macos" ]; then
   . "${HOME}/.bash_profile"
@@ -407,9 +424,9 @@ fi
 
 
 printf '%s\n\n' "ppgi setup complete."
-printf '%s\n' "if you installed ppgi to your \$PATH"
+printf '%s\n' "ppgi has been added to your \$PATH"
 printf '%s\n' "you can now run ppgi from anywhere in your terminal"
-printf '%s\n' "just enter the command: ppgi"
+printf '%s\n%s\n\n' "just enter the command: " "ppgi"
 printf '%s\n' "Goodbye. :]"
 exit 0
 #printf '%s\n' "do you want to run ppgi now?"
